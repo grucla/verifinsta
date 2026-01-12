@@ -25,7 +25,13 @@ Convert the domain and problem files such that a planner can do the verification
 ./verifier.py -o verifying example/domain.pddl example/problem.pddl
 ```
 
-Call a planner (e.g. Fast Downward) on verifying-domain.pddl and
-verifying-problem.pddl. If the planner can find a solution (the empty plan)
-then the original problem is a legal instance of the original domain.
+(With the `-o` option and its argument `verifying` the program also writes the
+output to the two files `verifying-domain.pddl` and `verifying-problem.pddl`
+instead of only printing it.)
+
+Then, call a planner (e.g.
+[Fast Downward](https://github.com/aibasel/downward)) on
+`verifying-domain.pddl` and `verifying-problem.pddl`. If the planner can find a
+solution (the empty plan) then the original problem is a legal instance of the
+original domain.
 
