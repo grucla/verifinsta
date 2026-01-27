@@ -6,8 +6,6 @@ TODO: reference grundke-et-al-icaps2024 for formalism that input domain and
 input problem are assumed to adhere to; also, explain expected syntax and
 mention which keywords are associated with parts added on top of PDDL 2.2
 
-not verifies goal, only initial state
-
 not checks PDDL-conformity
 
 not checks order invariance (TODO should we check this?)
@@ -17,6 +15,9 @@ but does not actually verify something. It only converts the given domain and
 instance into a (PDDL-conform) form such that any planner can do the actual
 verification (solvable means legal instance, unsolvable means illegal
 instance).
+
+TODO explain assumptions of `-s` option: goal should / must have specific form
+and g-versions of all goal predicates must be in :predicates
 
 # Example Usage
 
