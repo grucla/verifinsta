@@ -2,7 +2,12 @@
 
 import argparse
 
+import sys
+
 import lisp_parser
+
+# predicate symbol used for defining a linear order
+ORDERING_PRED_SYM = '<'
 
 
 # Returns the component of the given domain or problem whose keyword fits the
@@ -33,17 +38,26 @@ def copy_component_excluding_keyword_and_types(domain_or_problem_component):
 # Returns a list of all predicates (together with their parameters) that are
 # mentioned in the given goal. The goal is assumed to be STRIPS, i.e. a
 # conjunction of (grounded) atoms.
-def extract_predicates_from_strips_goal(goal):
-    # TODO convert each goal atom (assert that 'goal' is a conjunction of
-    # atoms?) into a predicate with parameters (remember to preserve the
-    # arity); return a list of those predicates
-    return []
+def get_predicates_of_strips_goal(goal):
+    predicate_symbols_in_goal = set(atom[0] for atom in goal[1:])
+    covered_predicate_symbols = set()
+    goal_predicates = []
+    for atom in goal[1:]:
+        if atom[0] in covered_predicate_symbols:
+            continue
+        covered_predicate_symbols.add(atom[0])
+        goal_pred = [atom[0]]
+        for i in range(1,len(atom)):
+            goal_pred.append(f"?x{i}")
+        goal_predicates.append(goal_pred)
+    return goal_predicates
 
-def verify_goal(problem, domain_goal):
-    # TODO check whether (problem) goal is identical to domain_goal
-    # (technically equivalence is sufficient but this is much more difficult to
-    # check; is it? think about this)
-    pass
+def verify_non_strips_goal(problem_goal, domain_goal):
+    if problem_goal != domain_goal:
+        print("Warning: The goal in the problem file and the goal in the domain file differ. For full legality they must be equal.")
+        # The program does not exit here because we assume that users are
+        # mostly interested in the legality of the initial state, not of the
+        # goal.
 
 def convert_domain_to_verifiable(domain, predicates_to_include):
     to_remove = []
@@ -51,15 +65,9 @@ def convert_domain_to_verifiable(domain, predicates_to_include):
         if not isinstance(component, list):
             continue
         if component[0] == ":predicates":
+            predicate_symbols = set(pred[0] for pred in component[1:])
             for predicate in predicates_to_include:
-                # TODO this check fails for typed g-predicates, if parameters
-                # use different names, and if arities do not match; Fix: only
-                # check if the predicate symbol appears in some predicate list
-                # (this check overlooks arity mismatches (between g-predicates
-                # extracted from the goal and g-predicates in :predicates) but
-                # such mismatches should only happen if something is wrong
-                # witht the input of the program
-                if not predicate in component:
+                if not predicate[0] in predicate_symbols:
                     component.append(predicate)
         if component[0] == ":domain-goal":
             to_remove.append(index)
@@ -72,21 +80,21 @@ def convert_domain_to_verifiable(domain, predicates_to_include):
     domain = [component for (index, component) in enumerate(domain) if index not in to_remove]
     return domain
 
-# Adds atoms to the given initial state that define a linear order over the
-# given objects.
-def add_ordering(initial_state, objects):
+# Builds an (arbitrary) linear ordering over the given objects and returns it
+# as a list of atoms using predicate symbol ORDERING_PRED_SYM.
+def get_ordering_over(objects):
+    ordering = []
     for index, smaller_obj in enumerate(objects):
-        ordering_atoms = [['<', smaller_obj, larger_obj] for larger_obj in objects[index+1:]]
-        initial_state.extend(ordering_atoms)
-    return initial_state
+        for larger_obj in objects[index+1:]:
+            ordering.append([ORDERING_PRED_SYM, smaller_obj, larger_obj])
+    return ordering
 
 def convert_problem_to_verifiable(problem,
                                   legality_predicate,
                                   move_strips_goal_to_init = False):
-    # TODO if move_strips_goal_to_init is True: assert that goal is STRIPS? add
-    # g-versions of goal-atoms to initial state
-    init_index = None
     objects = []
+    init_index = None
+    old_goal = []
     for index, component in enumerate(problem):
         if not isinstance(component, list):
             continue
@@ -95,15 +103,30 @@ def convert_problem_to_verifiable(problem,
         if component[0] == ":init":
             init_index = index
         if component[0] == ":goal":
+            old_goal = component[1]
             # replace the original goal with the legality predicate
             component[1] = [legality_predicate]
 
-        if init_index:
-            initial_state = problem[init_index]
-            predicates = set(atom[0] for atom in initial_state)
-            if not '<' in predicates:
-                problem[init_index] = add_ordering(initial_state, objects)
-            # TODO else verify whether '<' actually defines a linear order over all objects?
+    if init_index:
+        initial_state = problem[init_index]
+        predicate_symbols = set(atom[0] for atom in initial_state)
+
+        # Add an (arbitrary) ordering over all objects to the initial state
+        # (if there is not yet an ordering defined).
+        if not ORDERING_PRED_SYM in predicate_symbols:
+            initial_state.extend(get_ordering_over(objects))
+        # TODO else verify whether ORDERING_PRED_SYM actually defines a
+        # linear order over all objects?
+
+        if move_strips_goal_to_init:
+            # Add goal-versions of the atoms in the STRIPS goal to the initial
+            # state such that the STRIPS goal can be verified based on the
+            # legality constraints from the domain.
+            g_atoms = []
+            for goal_atom in old_goal[1:]:
+                g_predicate_symbol = goal_atom[0] + "_g"
+                g_atoms.append([g_predicate_symbol] + goal_atom[1:])
+            initial_state.extend(g_atoms)
     return problem
 
 # Converts the given list back into a string in PDDL format.
@@ -149,20 +172,20 @@ def main():
     goal = get_domain_or_problem_component(problem, ":goal")
     domain_goal = get_domain_or_problem_component(domain, ":domain-goal")
 
-    # The list of predicates of the output domain must include the predicate <
-    # (defining a linear order over the objects). If the strips_goal flag is
-    # set then also g-versions of the predicates mentioned in the goal must be
-    # included.
-    needed_predicates = [['<', '?obj1', '?obj2']]
+    # The list of predicates of the output domain must include the
+    # ORDERING_PRED_SYM (defining a linear order over the objects). If the
+    # strips_goal flag is set then also g-versions of the predicates mentioned
+    # in the goal must be included.
+    needed_predicates = [[ORDERING_PRED_SYM, '?x1', '?x2']]
     if args.strips_goal:
-        predicates = get_domain_or_problem_component(domain, ":predicates")
-        predicates = copy_component_excluding_keyword_and_types(
-                [":predicates"] + predicates)
-        # TODO check if domain-goal is STRIPS?
-        goal_predicates = extract_predicates_from_strips_goal(goal)
-        needed_predicates.extend(goal_predicates)
+        # TODO check more thoroughly whether goal is STRIPS?
+        if goal[0] != "and":
+            print(f"Error: Expected goal to start with 'and' but got '{old_goal[0]}'.")
+            sys.exit(1)
+        for predicate in get_predicates_of_strips_goal(goal):
+            needed_predicates.append([predicate[0] + "_g"] + predicate[1:])
     else:
-        verify_goal(goal, domain_goal)
+        verify_non_strips_goal(goal, domain_goal)
 
     domain = convert_domain_to_verifiable(domain, needed_predicates)
     problem = convert_problem_to_verifiable(problem,
