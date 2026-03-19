@@ -54,7 +54,7 @@ def get_predicates_of_strips_goal(goal):
 
 def verify_non_strips_goal(problem_goal, domain_goal):
     if problem_goal != domain_goal:
-        print("Warning: The goal in the problem file and the goal in the domain file differ. For full legality they must be equal.")
+        print("Warning: The goal in the problem file and the goal in the domain file differ. For full legality they must be equal. STRIPS goals (from problem files) can be treated specially with the -s option.")
         # The program does not exit here because we assume that users are
         # mostly interested in the legality of the initial state, not of the
         # goal.
@@ -132,11 +132,12 @@ def convert_problem_to_verifiable(problem,
 # Converts the given list back into a string in PDDL format.
 def to_pddl_string(parsed_pddl):
     if not isinstance(parsed_pddl, list):
-        return parsed_pddl + " "
+        return parsed_pddl
 
     output = ""
     for element in parsed_pddl:
-        output = output + to_pddl_string(element)
+        output = output + to_pddl_string(element) + " "
+    output = output[:-1] # remove trailing space character
 
     output = "(" + output + ")"
     if isinstance(parsed_pddl[0], str) and (parsed_pddl[0] == "problem" or
@@ -156,7 +157,7 @@ def main():
     parser.add_argument("domain", help="PDDL domain with legality constraints")
     parser.add_argument("problem", help="PDDL problem to verify against domain")
     parser.add_argument("-o", "--output-file-prefix",
-                        help="write the verifying domain into file '<prefix>-domain.pddl' and the verifying problem into file '<prefix>-problem.pddl'.")
+                        help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl.")
     parser.add_argument("-s", "--strips-goal", action='store_true',
                         help="With this option the program assumes that the goal is a STRIPS goal and, instead of verifying the goal directly, adds g-versions (see program description) of the goal atoms to the initial state.")
 
@@ -202,12 +203,18 @@ def main():
     print("Verifying problem:")
     print("------------------")
     print(output_problem_string)
+    print("")
 
     if args.output_file_prefix:
+        print("Writing verifying domain to file")
+        print(f"{args.output_file_prefix}-domain.pddl")
+        print("and verifying problem to file")
+        print(f"{args.output_file_prefix}-problem.pddl")
         with open(f"{args.output_file_prefix}-domain.pddl", "w") as f:
             f.write(output_domain_string)
         with open(f"{args.output_file_prefix}-problem.pddl", "w") as f:
             f.write(output_problem_string)
+        print("Done writing")
 
 if __name__ == "__main__":
     main()
