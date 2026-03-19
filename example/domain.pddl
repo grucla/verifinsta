@@ -1,4 +1,9 @@
-;; source: https://github.com/AI-Planning/pddl-generators/blob/main/blocksworld/domain.pddl
+;; source of original version:
+;; https://github.com/AI-Planning/pddl-generators/blob/main/blocksworld/domain.pddl
+;;
+;; source of this version with added legality-predicate, domain-goal, and axioms:
+;; https://github.com/aibasel/formally-represented-domains/blob/main/blocksworld-ipc23-learning/domain.pddl
+;; revision: 507b3c55553cb015b584dcd495d4e6bdf15dc9c8
 ;;
 (define (domain blocksworld)
 
@@ -79,29 +84,23 @@
 
 ;; axioms to encode task-specific goal information into the initial state
 
-;(:axiom (above_g ?x ?y)
-;  (or (on_g ?x ?y)
-;      (exists (?z) (and (on_g ?x ?z) (above_g ?z ?y)))))
-;
-;(:axiom (illegal) (exists (?b) (above_g ?b ?b)))
-;
-;(:axiom (illegal)
-;  (exists (?x ?y ?z) (and (on_g ?x ?y) (on_g ?x ?z) (not (= ?y ?z)))))
-;
-;(:axiom (illegal)
-;  (exists (?x ?y ?z) (and (on_g ?y ?x) (on_g ?z ?x) (not (= ?y ?z)))))
-;
-;(:axiom (illegal)
-;  (not (forall (?x) (or (on-table_g ?x) (exists (?y) (on_g ?x ?y))))))
-;
-;(:axiom (illegal) 
-;  (exists (?x ?y) (and (on-table_g ?x) (on_g ?x ?y))))
-;
-;(:axiom (illegal)
-;  (not (forall (?x) (or (clear_g ?x) (exists (?y) (on_g ?y ?x))))))
-;
-;(:axiom (illegal)
-;  (exists (?x ?y) (and (clear_g ?x) (on_g ?y ?x))))
+(:axiom (above_g ?x ?y)
+  (or (on_g ?x ?y)
+      (exists (?z) (and (on_g ?x ?z) (above_g ?z ?y)))))
+
+(:axiom (illegal) (exists (?b) (above_g ?b ?b)))
+
+(:axiom (illegal)
+  (exists (?x ?y ?z) (and (on_g ?x ?y) (on_g ?x ?z) (not (= ?y ?z)))))
+
+(:axiom (illegal)
+  (exists (?x ?y ?z) (and (on_g ?y ?x) (on_g ?z ?x) (not (= ?y ?z)))))
+
+(:axiom (illegal)
+  (exists (?x ?y) (and (on-table_g ?x) (on_g ?x ?y))))
+
+(:axiom (illegal)
+  (exists (?x ?y) (and (clear_g ?x) (on_g ?y ?x))))
 
 )
 
