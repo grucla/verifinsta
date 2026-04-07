@@ -186,7 +186,11 @@ def main():
         if goal[0] != "and":
             print(f"Error: Expected goal to start with 'and' but got '{goal[0]}'.")
             sys.exit(1)
-        for predicate in get_predicates_of_strips_goal(goal):
+        for goal_predicate in get_predicates_of_strips_goal(goal):
+            domain_predicates = get_domain_or_problem_component(domain,
+                                                                 ":predicates")
+            predicate = next(pred for pred in domain_predicates if pred[0] ==
+                             goal_predicate[0])
             needed_predicates.append([predicate[0] + "_g"] + predicate[1:])
     else:
         verify_non_strips_goal(goal, domain_goal)
