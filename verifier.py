@@ -11,18 +11,18 @@ ORDERING_PRED_SYM = '<'
 
 
 # Returns the component of the given domain or problem whose keyword fits the
-# given keyword.
+# given keyword. For components that can appear multiple times like :action, it
+# returns the first occurrence.
 def get_domain_or_problem_component(domain_or_problem, component_keyword):
     for component in domain_or_problem:
         if not isinstance(component, list):
             continue
         if component[0] == component_keyword:
-            return component[1]
+            return component[1:]
 
 # Returns a copy of the given domain or problem component where the component's
 # keyword and possible type information are removed.
 def copy_component_excluding_keyword_and_types(domain_or_problem_component):
-    # This function assumes that there is a keyword at index 0.
     assert(domain_or_problem_component[0].startswith(':'))
     # The index of the keyword is stored in to_remove such that it can be
     # ignored when copying the input later.
@@ -78,6 +78,9 @@ def convert_domain_to_verifiable(domain, predicates_to_include):
         if component[0] == ":axiom":
             component[0] =  ":derived"
     domain = [component for (index, component) in enumerate(domain) if index not in to_remove]
+    # TODO Add axioms to ensure that predicates are only instantiated with
+    # objects of correct types (see argument type rules of
+    # grundke-et-al-kr2025)
     return domain
 
 # Builds an (arbitrary) linear ordering over the given objects and returns it
@@ -149,7 +152,7 @@ def to_pddl_string(parsed_pddl):
 def main():
     parser = argparse.ArgumentParser(
             description="")
-            # TODO add description that explains purpose and output of the
+            # TODO Add description that explains purpose and output of the
             # program, and the assumptions of the -s flag
             # output: PDDL domain file without actions, PDDL problem file with
             # legality predicate as goal; UPDATE NEEDED after added goal
@@ -169,32 +172,32 @@ def main():
         problem = lisp_parser.parse_nested_list(problem_file)
 
     legality_predicate = get_domain_or_problem_component(domain,
-                                                         ":legality-predicate")
-    goal = get_domain_or_problem_component(problem, ":goal")
-    domain_goal = get_domain_or_problem_component(domain, ":domain-goal")
+                                                         ":legality-predicate")[0]
+    goal = get_domain_or_problem_component(problem, ":goal")[0]
+    domain_goal = get_domain_or_problem_component(domain, ":domain-goal")[0]
 
     # The list of predicates of the output domain must include the
     # ORDERING_PRED_SYM (defining a linear order over the objects). If the
-    # strips_goal flag is set then also g-versions of the predicates mentioned
-    # in the goal must be included.
+    # strips_goal flag is set then the list of predicates must also include
+    # g-versions of the predicates mentioned in the problem goal.
     needed_predicates = [[ORDERING_PRED_SYM, '?x1', '?x2']]
     if args.strips_goal:
-        # TODO check more thoroughly whether goal is STRIPS?
+        # TODO Check more thoroughly whether goal is STRIPS?
         if goal[0] != "and":
-            print(f"Error: Expected goal to start with 'and' but got '{old_goal[0]}'.")
+            print(f"Error: Expected goal to start with 'and' but got '{goal[0]}'.")
             sys.exit(1)
         for predicate in get_predicates_of_strips_goal(goal):
             needed_predicates.append([predicate[0] + "_g"] + predicate[1:])
     else:
         verify_non_strips_goal(goal, domain_goal)
 
-    domain = convert_domain_to_verifiable(domain, needed_predicates)
-    problem = convert_problem_to_verifiable(problem,
+    output_domain = convert_domain_to_verifiable(domain, needed_predicates)
+    output_problem = convert_problem_to_verifiable(problem,
                                             legality_predicate,
                                             args.strips_goal)
 
-    output_domain_string = to_pddl_string(domain)
-    output_problem_string = to_pddl_string(problem)
+    output_domain_string = to_pddl_string(output_domain)
+    output_problem_string = to_pddl_string(output_problem)
 
     print("Verifying domain:")
     print("-----------------")
@@ -206,10 +209,8 @@ def main():
     print("")
 
     if args.output_file_prefix:
-        print("Writing verifying domain to file")
-        print(f"{args.output_file_prefix}-domain.pddl")
-        print("and verifying problem to file")
-        print(f"{args.output_file_prefix}-problem.pddl")
+        print(f"Writing verifying domain to file {args.output_file_prefix}-domain.pddl")
+        print(f"and verifying problem to file {args.output_file_prefix}-problem.pddl")
         with open(f"{args.output_file_prefix}-domain.pddl", "w") as f:
             f.write(output_domain_string)
         with open(f"{args.output_file_prefix}-problem.pddl", "w") as f:
