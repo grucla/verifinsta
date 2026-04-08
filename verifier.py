@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
-
+import subprocess
 import sys
 
 import lisp_parser
@@ -166,11 +166,13 @@ def main():
             # legality predicate as goal; UPDATE NEEDED after added goal
             # verification
     parser.add_argument("domain", help="PDDL domain with legality constraints")
-    parser.add_argument("problem", help="PDDL problem to verify against domain")
+    parser.add_argument("problem", help="PDDL problem to verify against the domain")
     parser.add_argument("-o", "--output-file-prefix",
-                        help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl.")
+                        help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl")
     parser.add_argument("-s", "--strips-goal", action='store_true',
                         help="With this option the program assumes that the goal is a STRIPS goal and, instead of verifying the goal directly, adds g-versions (see program description) of the goal atoms to the initial state.")
+    parser.add_argument("-f", "--full", action='store_true',
+                        help="also run the Fast Downward planner to verify the input. This option requires that the -o option is set and assumes that the file 'fast-downward.sif' is present (see README).")
 
     args = parser.parse_args()
 
@@ -240,6 +242,24 @@ def main():
         with open(f"{args.output_file_prefix}-problem.pddl", "w") as f:
             f.write(output_problem_string)
         print("Done writing")
+
+    if args.full:
+        if not args.output_file_prefix:
+            print("Error: The --output-file-prefix (-o) option is not set but is a dependency for the --full (-f) option.")
+            sys.exit(1)
+        print(f"Running the Fast Downward planner to verify whether the input problem belongs to the input domain. Executed command:")
+        downward_call_string = f'./fast-downward.sif {args.output_file_prefix}-domain.pddl {args.output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
+        print("'" + downward_call_string + "'")
+        planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
+        # TODO Add an option that allows the user to access the planner output?
+        # E.g., by changing the --full option to optionally take a file
+        # location as argument and write the output to this file if the
+        # argument is given.
+        if "Solution found." in str(planner_result.stdout):
+            print("The planner found a solution, verification successful!")
+        else:
+            print("The planner did not find a solution, the input problem could not be verified for the given domain.")
+            # TODO Give more info to the user.
 
 if __name__ == "__main__":
     main()

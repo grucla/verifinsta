@@ -13,10 +13,39 @@ extended format we refer to the related papers mentioned in the
 [References](#references) section. The `example` folder contains two example
 domains and problems in the required format.
 
+# Setup
+
+If you already have a planner then there is nothing to set up. Call
+`./verifier.py --help` or see the [Example Usage](#example-usage) for usage
+information.
+
+If you do not have a planner yet, or if you want to do the preprocessing and
+verification in a single step, you can follow this setup to install the Fast
+Downward planner:
+
+Install Apptainer if it is not already installed. For installing Apptainer on
+Ubuntu you can for example download the AMD64 deb package from
+<https://github.com/apptainer/apptainer/releases> and then call (this example
+is for Apptainer version 1.4.5) `sudo apt install ./apptainer_1.4.5_amd64.deb`.
+
+After installing Apptainer, call it as follows to download the
+[Fast Downward](https://github.com/aibasel/downward) planner:
+
+```
+apptainer pull fast-downward.sif docker://aibasel/downward:24.06
+```
+
+You can use the obtained `fast-downward.sif` file to do the verification
+separately from the preprocessing, or you can use the `--full` option of
+`verifier.py` to do both in one step. (This latter part assumes that the
+`fast-downward.sif` file is in the same folder as the `verifier.py` file.) See
+the following section for an example.
+
 
 # Example Usage
 
-Convert the domain and problem files such that a planner can do the verification:
+Preprocess the input domain and problem such that a planner can do the actual
+verification:
 
 ```
 ./verifier.py -o verifying example/childsnack-domain.pddl example/childsnack-problem.pddl
@@ -26,16 +55,30 @@ Convert the domain and problem files such that a planner can do the verification
 the output but also writes it to the two files `verifying-domain.pddl` and
 `verifying-problem.pddl`.)
 
-Then, call a planner (e.g.
-[Fast Downward](https://github.com/aibasel/downward)) on
-`verifying-domain.pddl` and `verifying-problem.pddl`. If the planner can find a
-solution (the empty plan) then the original problem is a legal instance of the
-original domain.
+Then, call a planner on `verifying-domain.pddl` and `verifying-problem.pddl`.
+If you obtained the Fast Downward planner as described in the [Setup](#setup)
+section, you can call it for example like this:
+
+```
+./fast-downward.sif verifying-domain.pddl verifying-problem.pddl --search "eager(single(blind()))"
+```
+
+If the planner can find a solution (the empty plan) then the original problem
+is a legal instance of the original domain.
 
 For the childsnack example above the planner should find a solution, thus
 verifying that childsnack-problem.pddl is a legal instance of
 childsnack-domain.pddl. Uncommenting the line with `(at tray1 table1)` (l.20)
 in childsnack-problem.pddl makes it an illegal for childsnack-domain.pddl.
+
+## Preprocessing and Verification in One Step
+
+If you obtained the Fast Downward planner as described in the [Setup](#setup)
+section, you can do the preprocessing and verification in a single step:
+
+```
+./verifier.py -f -o verifying example/childsnack-domain.pddl example/childsnack-problem.pddl
+```
 
 
 # Input File Format
