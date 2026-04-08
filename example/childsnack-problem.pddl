@@ -15,7 +15,10 @@
     (not_allergic_gluten child1)
     (waiting child1 table1)
     (notexist sandw1)
+    ;; uncomment the following line to make the problem an illegal instance of
+    ;; the domain
+;    (at tray1 table1)
  )
-; (:goal  (and (served child1)))
+; (:goal (served child1))
  (:goal (forall (?c - child) (served ?c)))
 )
