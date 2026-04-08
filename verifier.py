@@ -36,13 +36,17 @@ def copy_component_excluding_keyword_and_types(domain_or_problem_component):
     return cleaned_component_copy
 
 # Returns a list of all predicates (together with their parameters) that are
-# mentioned in the given goal. The goal is assumed to be STRIPS, i.e. a
+# mentioned in the given goal. The goal is assumed to be STRIPS, i.e., a
 # conjunction of (grounded) atoms.
 def get_predicates_of_strips_goal(goal):
-    predicate_symbols_in_goal = set(atom[0] for atom in goal[1:])
+    if len(goal) > 1 and isinstance(goal[1], list):
+        normalized_goal = goal
+    else:
+        normalized_goal = ["and", goal]
+    predicate_symbols_in_goal = set(atom[0] for atom in normalized_goal[1:])
     covered_predicate_symbols = set()
     goal_predicates = []
-    for atom in goal[1:]:
+    for atom in normalized_goal[1:]:
         if atom[0] in covered_predicate_symbols:
             continue
         covered_predicate_symbols.add(atom[0])
@@ -125,8 +129,12 @@ def convert_problem_to_verifiable(problem,
             # Add goal-versions of the atoms in the STRIPS goal to the initial
             # state such that the STRIPS goal can be verified based on the
             # legality constraints from the domain.
+            if len(old_goal) > 1 and isinstance(old_goal[1], list):
+                normalized_goal = old_goal
+            else:
+                normalized_goal = ["and", old_goal]
             g_atoms = []
-            for goal_atom in old_goal[1:]:
+            for goal_atom in normalized_goal[1:]:
                 g_predicate_symbol = goal_atom[0] + "_g"
                 g_atoms.append([g_predicate_symbol] + goal_atom[1:])
             initial_state.extend(g_atoms)
@@ -183,8 +191,8 @@ def main():
     needed_predicates = [[ORDERING_PRED_SYM, '?x1', '?x2']]
     if args.strips_goal:
         # TODO Check more thoroughly whether goal is STRIPS?
-        if goal[0] != "and":
-            print(f"Error: Expected goal to start with 'and' but got '{goal[0]}'.")
+        if len(goal) > 1 and isinstance(goal[1], list) and goal[0] != "and":
+            print(f"Error: Expected goal to be a single atom or to start with 'and' but got '{goal}'.")
             sys.exit(1)
         for goal_predicate in get_predicates_of_strips_goal(goal):
             domain_predicates = get_domain_or_problem_component(domain,
