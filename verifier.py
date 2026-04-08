@@ -192,14 +192,26 @@ def main():
     if args.strips_goal:
         # TODO Check more thoroughly whether goal is STRIPS?
         if len(goal) > 1 and isinstance(goal[1], list) and goal[0] != "and":
-            print(f"Error: Expected goal to be a single atom or to start with 'and' but got '{goal}'.")
+            pddl_goal = to_pddl_string(goal)
+            print(f"Error: Expected goal to be a single atom or to start with 'and' but got '{pddl_goal}'.")
             sys.exit(1)
+        # TODO Warn (that this part of the STRIPS goal is unconstrained) if the
+        # g-versions of the predicates in the STRIPS goal are not mentioned in
+        # :predicates (and in :domain-goal?).
+        #
+        # For now, only consider domain goals of following form(?): conjunction
+        # of all-quantified (conjunction of?) implications where implicate
+        # single atom and implicant g-version of this atom (at some point need
+        # to think about special cases where conjunctions contain only one conjunct
+        # and implicants are true; and special case with nullary predicates).
         for goal_predicate in get_predicates_of_strips_goal(goal):
             domain_predicates = get_domain_or_problem_component(domain,
                                                                  ":predicates")
-            predicate = next(pred for pred in domain_predicates if pred[0] ==
-                             goal_predicate[0])
-            needed_predicates.append([predicate[0] + "_g"] + predicate[1:])
+            typed_goal_pred = next(
+                    pred for pred in domain_predicates if pred[0] ==
+                    goal_predicate[0])
+            needed_predicates.append([typed_goal_pred[0] + "_g"] +
+                                     typed_goal_pred[1:])
     else:
         verify_non_strips_goal(goal, domain_goal)
 
