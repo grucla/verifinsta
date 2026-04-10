@@ -20,6 +20,68 @@ def get_domain_or_problem_component(domain_or_problem, component_keyword):
         if component[0] == component_keyword:
             return component[1:]
 
+# Checks if the domain goal has the form assumed by the --strips-goal option
+# and whether g-versions of all atoms from the problem goal are mentioned in
+# the domain goal.
+# Assumed form of domain goal: all-quantified implication or a conjuntion of
+# all-quantified implications where the implicates are single atoms and the
+# implicants are g-versions of the implicates.
+# TODO Allow further conjunctions within all-quantors? This would be more
+# convenient for the user.
+def check_domain_goal_compatible_with_strips_goal(domain_goal,
+                                                  strips_goal_predicates):
+    warning_start = "Warning: The domain goal does not match the syntax expected by the --strips-goal option."
+    warning_end = "The domain goal is not further checked and might lead to unexpected verification results."
+    logic_operator_symbols = {"and", "or", "not", "forall", "exists", "imply"}
+    strips_goal_predicate_symbols = set(pred[0] for pred in strips_goal_predicates)
+    mentioned_non_g_predicate_symbols = set()
+    if domain_goal[0] == "and":
+        to_check = domain_goal[1:]
+    else:
+        to_check = [domain_goal]
+    for conjunct in to_check:
+        if conjunct[0] != "forall":
+            print(warning_start, "Expected")
+            print(to_pddl_string(conjunct))
+            print(f"to start with 'forall' but got '{conjunct[0]}'.", warning_end)
+            return
+        # TODO Also check for correct length?
+        implication = conjunct[2]
+        if implication[0] != "imply":
+            print(warning_start, "Expected")
+            print(to_pddl_string(implication))
+            print(f"to be an implication starting with 'imply' but got '{implication[0]}.'", warning_end)
+            return
+        # TODO Also check for correct length?
+        implicant = implication[1]
+        implicate = implication[2]
+        if not isinstance(implicant[0], str) or implicant[0].lower() in logic_operator_symbols:
+            print(warning_start, "Expected the implicant of implication")
+            print(to_pddl_string(implication))
+            print("to be a single atom but got '{}'. {}".format(to_pddl_string(implicant), warning_end))
+            return
+        if not isinstance(implicate[0], str) or implicate[0].lower() in logic_operator_symbols:
+            print(warning_start, "Expected the implicate of implication")
+            print(to_pddl_string(implication))
+            print("to be a single atom but got '{}'. {}".format(to_pddl_string(implicate), warning_end))
+            return
+        implicant_predicate_symbol = implicant[0]
+        implicate_predicate_symbol = implicate[0]
+        if implicant_predicate_symbol != implicate_predicate_symbol + "_g":
+            print(warning_start, "Expected the implicant of implication")
+            print(to_pddl_string(implication))
+            print(f"to start with '{implicate_predicate_symbol}_g' but got '{implicant_predicate_symbol}'.", warning_end)
+            return
+        if implicant[1:] != implicate[1:]:
+            print(warning_start, "Expected the arguments of the two atoms in the implication")
+            print(to_pddl_string(implication))
+            print(f"to be the same but got {implicant[1:]} and {implicate[1:]}.", warning_end)
+            return
+        mentioned_non_g_predicate_symbols.add(implicate_predicate_symbol)
+    uncovered_predicates = strips_goal_predicate_symbols - mentioned_non_g_predicate_symbols
+    if uncovered_predicates:
+        print(f"Warning: Expected to find all predicates from the problem goal in the domain goal but did not find {uncovered_predicates} in the domain goal. The predicate(s) might be underspecified.")
+
 # Returns a copy of the given domain or problem component where the component's
 # keyword and possible type information are removed.
 def copy_component_excluding_keyword_and_types(domain_or_problem_component):
@@ -82,9 +144,6 @@ def convert_domain_to_verifiable(domain, predicates_to_include):
         if component[0] == ":axiom":
             component[0] =  ":derived"
     domain = [component for (index, component) in enumerate(domain) if index not in to_remove]
-    # TODO Add axioms to ensure that predicates are only instantiated with
-    # objects of correct types (see argument type rules of
-    # grundke-et-al-kr2025)
     return domain
 
 # Builds an (arbitrary) linear ordering over the given objects and returns it
@@ -195,18 +254,11 @@ def main():
         # TODO Check more thoroughly whether goal is STRIPS?
         if len(goal) > 1 and isinstance(goal[1], list) and goal[0] != "and":
             pddl_goal = to_pddl_string(goal)
-            print(f"Error: Expected goal to be a single atom or to start with 'and' but got '{pddl_goal}'.")
+            print(f"Error: Expected the (problem) goal to be a single atom or to start with 'and' but got '{pddl_goal}'.")
             sys.exit(1)
-        # TODO Warn (that this part of the STRIPS goal is unconstrained) if the
-        # g-versions of the predicates in the STRIPS goal are not mentioned in
-        # :predicates (and in :domain-goal?).
-        #
-        # For now, only consider domain goals of following form(?): conjunction
-        # of all-quantified (conjunction of?) implications where implicate
-        # single atom and implicant g-version of this atom (at some point need
-        # to think about special cases where conjunctions contain only one conjunct
-        # and implicants are true; and special case with nullary predicates).
-        for goal_predicate in get_predicates_of_strips_goal(goal):
+        goal_predicates = get_predicates_of_strips_goal(goal)
+        check_domain_goal_compatible_with_strips_goal(domain_goal, goal_predicates)
+        for goal_predicate in goal_predicates:
             domain_predicates = get_domain_or_problem_component(domain,
                                                                  ":predicates")
             typed_goal_pred = next(

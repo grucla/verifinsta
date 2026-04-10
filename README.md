@@ -142,6 +142,8 @@ predicate symbol.
 The program not checks order invariance. TODO should we check this?
 
 TODO Explain the assumptions of the `-s` option: the domain goal must have a
-specific form and to describe allowed STRIPS goals special g-versions of the
-goal atoms must be used in the axioms (and be mentioned in the domain goal).
+specific form (see code comment of function
+`check_domain_goal_compatible_with_strips_goal`) and to describe allowed STRIPS
+goals special g-versions of the goal atoms must be used in the axioms (and be
+mentioned in the domain goal).  Those special atoms are assumed to be static.
 

@@ -25,8 +25,8 @@
 (:legality-predicate legal)
 
 (:domain-goal
-  (and (forall (?b) (and (imply (clear_g ?b) (clear ?b))
-                         (imply (on-table_g ?b) (on-table ?b))))
+  (and (forall (?b) (imply (clear_g ?b) (clear ?b)))
+       (forall (?b) (imply (on-table_g ?b) (on-table ?b)))
        (forall (?b1 ?b2) (imply (on_g ?b1 ?b2) (on ?b1 ?b2)))))
 
 (:action pickup
