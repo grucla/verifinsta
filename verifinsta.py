@@ -23,9 +23,9 @@ def get_domain_or_problem_component(domain_or_problem, component_keyword):
 # Checks if the domain goal has the form assumed by the --strips-goal option
 # and whether g-versions of all atoms from the problem goal are mentioned in
 # the domain goal.
-# Assumed form of domain goal: all-quantified implication or a conjuntion of
-# all-quantified implications where the implicates are single atoms and the
-# implicants are g-versions of the implicates.
+# Assumed form of domain goal: universally quantified implication or a
+# conjuntion of universally quantified implications where the implicates are
+# single atoms and the implicants are g-versions of the implicates.
 # TODO Allow further conjunctions within all-quantors? This would be more
 # convenient for the user.
 def check_domain_goal_compatible_with_strips_goal(domain_goal,
@@ -218,20 +218,15 @@ def to_pddl_string(parsed_pddl):
 
 def main():
     parser = argparse.ArgumentParser(
-            description="")
-            # TODO Add description that explains purpose and output of the
-            # program, and the assumptions of the -s flag
-            # output: PDDL domain file without actions, PDDL problem file with
-            # legality predicate as goal; UPDATE NEEDED after added goal
-            # verification
-    parser.add_argument("domain", help="PDDL domain with legality constraints")
-    parser.add_argument("problem", help="PDDL problem to verify against the domain")
+            description="Verifinsta is a tool to help verifying if a planning problem is a legal instance of a planning domain. It converts the given domain and given problem to a 'verifying' domain and 'verifying' problem where the 'verifying' problem is solvable (by the empty plan) for the 'veriyfing' domain if the input problem is a legal instance of the input domain. See the --full option for doing this conversion and the actual verification in a single call of verifinsta.")
+    parser.add_argument("domain", help="PDDL 2.2 domain with legality query and domain-wide goal")
+    parser.add_argument("problem", help="PDDL 2.2 problem to verify against the domain")
     parser.add_argument("-o", "--output-file-prefix",
                         help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl")
     parser.add_argument("-s", "--strips-goal", action='store_true',
-                        help="With this option the program assumes that the goal is a STRIPS goal and, instead of verifying the goal directly, adds g-versions (see program description) of the goal atoms to the initial state.")
+                        help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
     parser.add_argument("-f", "--full", action='store_true',
-                        help="also run the Fast Downward planner to verify the input. This option requires that the -o option is set and assumes that the file 'fast-downward.sif' is present (see README).")
+                        help="also run the Fast Downward planner to verify the input. This option requires that the -o option is set and assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
 
     args = parser.parse_args()
 

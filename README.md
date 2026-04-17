@@ -30,8 +30,8 @@ symbol.
 Install [Python](https://www.python.org/) if it is not already installed.
 
 If you already have a planner then there is nothing more to set up. Call
-`./verifinsta.py --help` or see the [Example Usage](#example-usage) for usage
-information.
+`./verifinsta.py --help` or see the [Example Usage](#example-usage) section for
+example calls.
 
 If you do not have a planner yet, or if you want to do the conversion and
 verification in a single step, you can follow these steps to install the
@@ -82,10 +82,10 @@ If the planner can find a solution (the empty plan) then the original problem
 is a legal instance of the original domain.
 
 For the childsnack example above the planner should find a solution, thus
-verifying that childsnack-problem.pddl is a legal instance of
-childsnack-domain.pddl. Uncommenting the line with `(at tray1 table1)` (l.20)
-in childsnack-problem.pddl makes it an illegal instance for
-childsnack-domain.pddl. Doing the conversion for the modified problem (with
+verifying that `childsnack-problem.pddl` is a legal instance of
+`childsnack-domain.pddl`. Uncommenting the line with `(at tray1 table1)` (l.20)
+in `childsnack-problem.pddl` makes it an illegal instance for
+`childsnack-domain.pddl`. Doing the conversion for the modified problem (with
 the unchanged domain) results in an unsolvable planning problem.
 
 ### Conversion and Verification in One Step
@@ -134,6 +134,42 @@ program consisting of all axioms (of both kinds) on the initial state of the
 given program determines the output of the legality query.
 
 
+## Allowing STRIPS Goals
+
+In general `verifinsta` requires the goal of the given problem file to be
+identical to the goal of the given domain file. However, if the assumptions
+below hold and the `--strips-goal` option is set then `verifinsta` extends the
+conversion such that the legality query (defined via the `:axiom`s) of the
+input domain can also determine the legality of the problem goal.
+
+Choose this option if your problem files are in STRIPS and your domain file
+describes with `:axiom`s which kinds of problem goals are allowed. For an
+example, see the `:axiom`s at the end of `blocksworld-domain.pddl` in the
+`examples` folder.
+
+If the `--strips-goal` option is set then `verifinsta` assumes the following:
+
+- The goal in the problem file is in STRIPS, i.e., a conjunction of
+  propositional atoms.
+- For each predicate symbol `somePred` occurring in the problem goal, the
+  `:predicates` section of the domain file defines a predicate `somePred_g`
+  with the same arity (and same argument types if typing is used) as
+  `somePred`. Atoms using these `_g` predicate symbols are assumed to be
+  static, i.e., that no action can change their truth value.
+- The goal in the domain file is a first-order sentence of the following form.
+  It is either a universally quantified implication or a conjunction of
+  universally quantified implications. In each such implication, the implicant
+  and implicate are both the same single atom except that the implicant uses
+  the `_g` version of the implicate's predicate.  For an example of such a
+  domain goal, see the `:domain-goal` section of `blocksworld-domain.pddl` in
+  the `examples` folder.
+
+Under these assumptions a problem goal is legal (i.e., satisfies the legality
+query) if the initial state extended with `_g`-versions of the goal atoms is
+legal. Note that a goal is trivially legal if the assumptions hold and the
+`:axiom`s in the domain not mention any `_g`-atoms.
+
+
 ## References
 
 ### Grundke et al. (2024)
@@ -152,11 +188,5 @@ Freiburg, Department of Computer Science (2004).
 
 ## Todo
 
-The program not checks order invariance. TODO should we check this?
-
-TODO Explain the assumptions of the `-s` option: the domain goal must have a
-specific form (see code comment of function
-`check_domain_goal_compatible_with_strips_goal`) and to describe allowed STRIPS
-goals special g-versions of the goal atoms must be used in the axioms (and be
-mentioned in the domain goal).  Those special atoms are assumed to be static.
+The program not checks order invariance. Should we check this?
 
