@@ -169,8 +169,6 @@ def convert_problem_to_verifiable(problem,
             continue
         if component[0] == ":objects":
             objects += copy_component_excluding_keyword_and_types(component)
-            print(objects)
-            print("-------------------------------------------------------------------")
         if component[0] == ":init":
             init_index = index
         if component[0] == ":goal":
