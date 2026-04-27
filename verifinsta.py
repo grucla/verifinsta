@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import os.path
 import subprocess
 import sys
 
@@ -294,9 +295,12 @@ def main():
         if not args.output_file_prefix:
             print("Error: The --output-file-prefix (-o) option is not set but is a dependency for the --full (-f) option.")
             sys.exit(1)
-        print(f"Running the Fast Downward planner to verify whether the input problem belongs to the input domain. Executed command:")
+        print(f"Running the Fast Downward planner to verify whether the input problem belongs to the input domain. Executing command:")
         downward_call_string = f'./fast-downward.sif {args.output_file_prefix}-domain.pddl {args.output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
         print("'" + downward_call_string + "'")
+        if not os.path.isfile("fast-downward.sif"):
+            print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
+            sys.exit(1)
         planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
         # TODO Add an option that allows the user to access the planner output?
         # E.g., by changing the --full option to optionally take a file
@@ -305,7 +309,7 @@ def main():
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
         else:
-            print("The planner did not find a solution, the input problem could not be verified for the given domain.")
+            print("The planner did not find a solution. The input problem could not be verified for the given domain.")
             # TODO Give more info to the user.
 
 if __name__ == "__main__":
