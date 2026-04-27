@@ -133,6 +133,13 @@ Some `:axiom` must define the legality predicate such that evaluating the logic
 program consisting of all axioms (of both kinds) on the initial state of the
 given program determines the output of the legality query.
 
+Note: `verifinsta` assumes (without checking) that the legality query of the
+given domain is *order-invariant*, i.e., that the specific order of the objects
+does not matter for determining whether the legality predicate is true. The
+ordering that `verifinsta` uses is the same as the ordering in the given domain
+and problem files where the domain constants are ordered before the problem's
+objects.
+
 
 ## Allowing STRIPS Goals
 
@@ -188,5 +195,10 @@ Freiburg, Department of Computer Science (2004).
 
 ## Todo
 
-The program not checks order invariance. Should we check this?
+Mention that verifinsta allows action costs but ignores them.
+
+Explain assumptions about and semantics of '<' and adjust code accordingly
+(especially the check in l.182): Only the legality axioms may mention '<'
+(e.g., :predicates cannot mention it) and user must assume that it defines
+arbitrary order (although verifinsta uses one specific order).
 

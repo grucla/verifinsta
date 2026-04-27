@@ -20,6 +20,7 @@ def get_domain_or_problem_component(domain_or_problem, component_keyword):
             continue
         if component[0] == component_keyword:
             return component[1:]
+    return []
 
 # Checks if the domain goal has the form assumed by the --strips-goal option
 # and whether g-versions of all atoms from the problem goal are mentioned in
@@ -158,15 +159,18 @@ def get_ordering_over(objects):
 
 def convert_problem_to_verifiable(problem,
                                   legality_predicate,
+                                  domain_constants = [],
                                   move_strips_goal_to_init = False):
-    objects = []
+    objects = domain_constants
     init_index = None
     old_goal = []
     for index, component in enumerate(problem):
         if not isinstance(component, list):
             continue
         if component[0] == ":objects":
-            objects = copy_component_excluding_keyword_and_types(component)
+            objects += copy_component_excluding_keyword_and_types(component)
+            print(objects)
+            print("-------------------------------------------------------------------")
         if component[0] == ":init":
             init_index = index
         if component[0] == ":goal":
@@ -238,6 +242,8 @@ def main():
 
     legality_predicate = get_domain_or_problem_component(domain,
                                                          ":legality-predicate")[0]
+    domain_constants_component = [":constants"] + get_domain_or_problem_component(domain, ":constants")
+    domain_constants = copy_component_excluding_keyword_and_types(domain_constants_component)
     goal = get_domain_or_problem_component(problem, ":goal")[0]
     domain_goal = get_domain_or_problem_component(domain, ":domain-goal")[0]
 
@@ -268,6 +274,7 @@ def main():
     output_domain = convert_domain_to_verifiable(domain, needed_predicates)
     output_problem = convert_problem_to_verifiable(problem,
                                             legality_predicate,
+                                            domain_constants,
                                             args.strips_goal)
 
     output_domain_string = to_pddl_string(output_domain)
