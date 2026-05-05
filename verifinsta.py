@@ -87,6 +87,9 @@ def check_domain_goal_compatible_with_strips_goal(domain_goal,
 # Returns a copy of the given domain or problem component where the component's
 # keyword and possible type information are removed.
 def copy_component_excluding_keyword_and_types(domain_or_problem_component):
+    # TODO Make this function consistent with get_domain_or_problem_component
+    # such that either this function not expects the input to start with a
+    # keyword, or get_domain_or_problem_component does not remove the keyword.
     assert(domain_or_problem_component[0].startswith(':'))
     # The index of the keyword is stored in to_remove such that it can be
     # ignored when copying the input later.
@@ -229,7 +232,7 @@ def main():
     parser.add_argument("-s", "--strips-goal", action='store_true',
                         help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
     parser.add_argument("-f", "--full", action='store_true',
-                        help="also run the Fast Downward planner to verify the input. This option requires that the -o option is set and assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
+                        help="also run the Fast Downward planner to verify the input. This option assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
 
     args = parser.parse_args()
 
@@ -287,21 +290,22 @@ def main():
     print(output_problem_string)
     print("")
 
+    output_file_prefix = "verifiying"
     if args.output_file_prefix:
-        print(f"Writing verifying domain to file {args.output_file_prefix}-domain.pddl")
-        print(f"and verifying problem to file {args.output_file_prefix}-problem.pddl")
-        with open(f"{args.output_file_prefix}-domain.pddl", "w") as f:
+        output_file_prefix = args.output_file_prefix
+
+    if args.output_file_prefix or args.full:
+        print(f"Writing verifying domain to file {output_file_prefix}-domain.pddl")
+        print(f"and verifying problem to file {output_file_prefix}-problem.pddl")
+        with open(f"{output_file_prefix}-domain.pddl", "w") as f:
             f.write(output_domain_string)
-        with open(f"{args.output_file_prefix}-problem.pddl", "w") as f:
+        with open(f"{output_file_prefix}-problem.pddl", "w") as f:
             f.write(output_problem_string)
         print("Done writing")
 
     if args.full:
-        if not args.output_file_prefix:
-            print("Error: The --output-file-prefix (-o) option is not set but is a dependency for the --full (-f) option.")
-            sys.exit(1)
         print(f"Running the Fast Downward planner to verify whether the input problem belongs to the input domain. Executing command:")
-        downward_call_string = f'./fast-downward.sif {args.output_file_prefix}-domain.pddl {args.output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
+        downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
         print("'" + downward_call_string + "'")
         if not os.path.isfile("fast-downward.sif"):
             print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
@@ -311,6 +315,10 @@ def main():
         # E.g., by changing the --full option to optionally take a file
         # location as argument and write the output to this file if the
         # argument is given.
+
+        # Clean up temporary files created by Fast Downward
+        subprocess.run("./fast-downward.sif --cleanup", shell=True)
+
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
         else:
