@@ -5,7 +5,7 @@ import os.path
 import subprocess
 import sys
 
-import lisp_parser
+from . import lisp_parser
 
 # predicate symbol used for defining a linear order
 ORDERING_PRED_SYM = '<'

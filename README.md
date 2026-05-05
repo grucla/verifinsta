@@ -29,9 +29,36 @@ symbol.
 
 Install [Python](https://www.python.org/) if it is not already installed.
 
-If you already have a planner then there is nothing more to set up. Call
-`./verifinsta.py --help` or see the [Example Usage](#example-usage) section for
-example calls.
+Clone this repository:
+```
+git clone https://github.com/grucla/verifinsta.git verifinsta
+```
+
+Optionally, create and activate a virtual environment (to keep your system clean
+by capsulating verifinsta and its dependencies):
+```
+python3 -m venv --prompt verifinsta-env verifinsta/.venv
+source verifinsta/.venv/bin/activate
+```
+
+(You can deactivate the virtual environment with `deactivate`.)
+
+Install `verifinsta` and its dependencies:
+```
+pip install verifinsta/
+```
+
+You can test your installation with
+```
+python3 -m verifinsta -h
+```
+which should show you `verifinsta`'s help message.
+
+If you do not already have a planner or if you want to use `verifinsta`'s
+`--full` option, see the following section for setting up the Fast Downward
+planner to use with `verifinsta`.
+
+### Setting Up a Planner
 
 If you do not have a planner yet, or if you want to do the conversion and
 verification in a single step, you can follow these steps to install the
@@ -45,7 +72,6 @@ is for Apptainer version 1.4.5) `sudo apt install ./apptainer_1.4.5_amd64.deb`.
 
 After installing Apptainer, call it as follows to download the
 Fast Downward (version 24.06) planner:
-
 ```
 apptainer pull fast-downward.sif docker://aibasel/downward:24.06
 ```
@@ -53,7 +79,7 @@ apptainer pull fast-downward.sif docker://aibasel/downward:24.06
 You can use the obtained `fast-downward.sif` file to do the verification
 separately from the conversion, or you can use the `--full` option of
 `verifinsta.py` to do both in one step. (This latter part assumes that the
-`fast-downward.sif` file is in the same folder as the `verifinsta.py` file.)
+`fast-downward.sif` file is in the folder where you execute `verifinsta`.)
 See the following section for an example.
 
 
@@ -63,7 +89,7 @@ To convert the childsnack domain and problem (from the `examples` folder) such
 that a planner can do the actual verification, execute:
 
 ```
-./verifinsta.py -o verifying examples/childsnack-domain.pddl examples/childsnack-problem.pddl
+python3 -m verifinstay -o verifying verifinsta/examples/childsnack-domain.pddl verifinsta/examples/childsnack-problem.pddl
 ```
 
 (With the `-o` option and its argument `verifying` the program not just prints
@@ -71,9 +97,9 @@ the output but also writes it to the two files `verifying-domain.pddl` and
 `verifying-problem.pddl`.)
 
 Then, call a planner on `verifying-domain.pddl` and `verifying-problem.pddl`.
-If you obtained the Fast Downward planner as described in the [Setup](#setup)
-section, you can call it for example like this:
-
+If you obtained the Fast Downward planner as described in the
+[Setting Up a Planner](#setting-up-a-planner) section, you can call it for
+example like this:
 ```
 ./fast-downward.sif verifying-domain.pddl verifying-problem.pddl --search "eager(single(blind()))"
 ```
@@ -90,12 +116,12 @@ the unchanged domain) results in an unsolvable planning problem.
 
 ### Conversion and Verification in One Step
 
-If you obtained the Fast Downward planner as described in the [Setup](#setup)
-section, you can do the conversion and verification (of the childsnack example)
-in a single step by executing:
-
+If you obtained the Fast Downward planner as described in the
+[Setting Up a Planner](#setting-up-a-planner) section, you can do the
+conversion and verification in single step by using `verifinsta`'s `--full`
+option. For the childsnack example, call `verifinsta` like this:
 ```
-./verifier.py --full -o verifying example/childsnack-domain.pddl example/childsnack-problem.pddl
+python3 -m verifinsta --full verifinsta/example/childsnack-domain.pddl verifinsta/example/childsnack-problem.pddl
 ```
 
 
