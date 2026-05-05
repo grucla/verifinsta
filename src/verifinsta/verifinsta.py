@@ -6,10 +6,25 @@ import subprocess
 import sys
 
 from . import lisp_parser
+from . import profiling
 
 # predicate symbol used for defining a linear order
 ORDERING_PRED_SYM = '<'
 
+
+def parse_command_line_args():
+    parser = argparse.ArgumentParser(
+            description="Verifinsta is a tool to help verifying if a planning problem is a legal instance of a planning domain. It converts the given domain and given problem to a 'verifying' domain and 'verifying' problem where the 'verifying' problem is solvable (by the empty plan) for the 'veriyfing' domain if the input problem is a legal instance of the input domain. See the --full option for doing this conversion and the actual verification in a single call of verifinsta.")
+    parser.add_argument("domain", help="PDDL 2.2 domain with legality query and domain-wide goal")
+    parser.add_argument("problem", help="PDDL 2.2 problem to verify against the domain")
+    parser.add_argument("-o", "--output-file-prefix",
+                        help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl")
+    parser.add_argument("-s", "--strips-goal", action='store_true',
+                        help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
+    parser.add_argument("-f", "--full", action='store_true',
+                        help="also run the Fast Downward planner to verify the input. This option assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
+
+    return parser.parse_args()
 
 # Returns the component of the given domain or problem whose keyword fits the
 # given keyword. For components that can appear multiple times like :action, it
@@ -222,25 +237,7 @@ def to_pddl_string(parsed_pddl):
         output = output + "\n"
     return output
 
-def main():
-    parser = argparse.ArgumentParser(
-            description="Verifinsta is a tool to help verifying if a planning problem is a legal instance of a planning domain. It converts the given domain and given problem to a 'verifying' domain and 'verifying' problem where the 'verifying' problem is solvable (by the empty plan) for the 'veriyfing' domain if the input problem is a legal instance of the input domain. See the --full option for doing this conversion and the actual verification in a single call of verifinsta.")
-    parser.add_argument("domain", help="PDDL 2.2 domain with legality query and domain-wide goal")
-    parser.add_argument("problem", help="PDDL 2.2 problem to verify against the domain")
-    parser.add_argument("-o", "--output-file-prefix",
-                        help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl")
-    parser.add_argument("-s", "--strips-goal", action='store_true',
-                        help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
-    parser.add_argument("-f", "--full", action='store_true',
-                        help="also run the Fast Downward planner to verify the input. This option assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
-
-    args = parser.parse_args()
-
-    with open(args.domain, 'r') as domain_file:
-        domain = lisp_parser.parse_nested_list(domain_file)
-    with open(args.problem, 'r') as problem_file:
-        problem = lisp_parser.parse_nested_list(problem_file)
-
+def build_verifying_task(domain, problem, args):
     legality_predicate = get_domain_or_problem_component(domain,
                                                          ":legality-predicate")[0]
     domain_constants_component = [":constants"] + get_domain_or_problem_component(domain, ":constants")
@@ -272,14 +269,29 @@ def main():
     else:
         verify_non_strips_goal(goal, domain_goal)
 
-    output_domain = convert_domain_to_verifiable(domain, needed_predicates)
-    output_problem = convert_problem_to_verifiable(problem,
+    verifying_domain = convert_domain_to_verifiable(domain, needed_predicates)
+    verifying_problem = convert_problem_to_verifiable(problem,
                                             legality_predicate,
                                             domain_constants,
                                             args.strips_goal)
+    return (verifying_domain, verifying_problem)
 
-    output_domain_string = to_pddl_string(output_domain)
-    output_problem_string = to_pddl_string(output_problem)
+def main():
+    timer = profiling.Timer()
+    memory_measurement = profiling.MemoryMeasurement()
+
+    args = parse_command_line_args()
+
+    with profiling.profiling("Parsing input files"):
+        with open(args.domain, 'r') as domain_file:
+            domain = lisp_parser.parse_nested_list(domain_file)
+        with open(args.problem, 'r') as problem_file:
+            problem = lisp_parser.parse_nested_list(problem_file)
+
+    with profiling.profiling("Building verifying domain and problem"):
+        (verifying_domain, verifying_problem) = build_verifying_task(domain, problem, args)
+        output_domain_string = to_pddl_string(verifying_domain)
+        output_problem_string = to_pddl_string(verifying_problem)
 
     print("Verifying domain:")
     print("-----------------")
@@ -295,35 +307,39 @@ def main():
         output_file_prefix = args.output_file_prefix
 
     if args.output_file_prefix or args.full:
-        print(f"Writing verifying domain to file {output_file_prefix}-domain.pddl")
-        print(f"and verifying problem to file {output_file_prefix}-problem.pddl")
-        with open(f"{output_file_prefix}-domain.pddl", "w") as f:
-            f.write(output_domain_string)
-        with open(f"{output_file_prefix}-problem.pddl", "w") as f:
-            f.write(output_problem_string)
-        print("Done writing")
+        with profiling.profiling("Writing verifying domain and problem to file"):
+            with open(f"{output_file_prefix}-domain.pddl", "w") as f:
+                f.write(output_domain_string)
+            with open(f"{output_file_prefix}-problem.pddl", "w") as f:
+                f.write(output_problem_string)
 
     if args.full:
-        print(f"Running the Fast Downward planner to verify whether the input problem belongs to the input domain. Executing command:")
+        print(f"Running the Fast Downward planner on the verifiying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
         downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
         print("'" + downward_call_string + "'")
+
         if not os.path.isfile("fast-downward.sif"):
             print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
             sys.exit(1)
-        planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
-        # TODO Add an option that allows the user to access the planner output?
-        # E.g., by changing the --full option to optionally take a file
-        # location as argument and write the output to this file if the
-        # argument is given.
 
-        # Clean up temporary files created by Fast Downward
-        subprocess.run("./fast-downward.sif --cleanup", shell=True)
+        with profiling.profiling("Running Fast Downward"):
+            planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
+            # TODO Add an option that allows the user to access the planner output?
+            # E.g., by changing the --full option to optionally take a file
+            # location as argument and write the output to this file if the
+            # argument is given.
+
+            # Clean up temporary files created by Fast Downward
+            subprocess.run("./fast-downward.sif --cleanup", shell=True)
 
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
         else:
             print("The planner did not find a solution. The input problem could not be verified for the given domain.")
             # TODO Give more info to the user.
+
+    print(f"Runtime total: {timer}")
+    print(f"Memory total: {memory_measurement}")
 
 if __name__ == "__main__":
     main()
