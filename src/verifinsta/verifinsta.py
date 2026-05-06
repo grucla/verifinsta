@@ -289,7 +289,7 @@ def main():
         with open(args.problem, 'r') as problem_file:
             problem = lisp_parser.parse_nested_list(problem_file)
 
-    with profiling.profiling("Building verifying domain and problem"):
+    with profiling.profiling("Building verifying domain and problem", block=True):
         (verifying_domain, verifying_problem) = build_verifying_task(domain, problem, args)
         output_domain_string = to_pddl_string(verifying_domain)
         output_problem_string = to_pddl_string(verifying_problem)
@@ -324,7 +324,7 @@ def main():
             print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
             sys.exit(1)
 
-        with profiling.profiling("Running Fast Downward"):
+        with profiling.profiling("Running Fast Downward", block=True):
             planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
             # TODO Add an option that allows the user to access the planner output?
             # E.g., by changing the --full option to optionally take a file
