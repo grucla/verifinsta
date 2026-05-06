@@ -161,7 +161,8 @@ def convert_domain_to_verifiable(domain, predicates_to_include):
             to_remove.append(index)
         if component[0] == ":legality-predicate":
             to_remove.append(index)
-        if component[0] == ":axiom":
+        if component[0] == ":legality-axiom" or component[0] == ":axiom":
+            # Consider ':axiom' for backwards compatibility reasons.
             component[0] =  ":derived"
     domain = [component for (index, component) in enumerate(domain) if index not in to_remove]
     return domain

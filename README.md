@@ -138,8 +138,8 @@ predicate* and a logic program consisting of PDDL axioms. For these extensions,
 - `:domain-goal` is a first-order logic formula. It must be identical to the goal
   formula of the given problem file (with the `-s` option the `verifinsta`
   makes an exception for STRIPS goals, see below for details).
-- `:axiom` is a PDDL axiom similar to those identified by the keyword
-  `:derived`. Some `:axiom` must define the legality predicate because
+- `:legality-axiom` is a PDDL axiom similar to those identified by the keyword
+  `:derived`. Some `:legality-axiom` must define the legality predicate because
   otherwise the legality query is not well-defined.
 
 A given problem belongs to a given domain if the problem goal is identical to
@@ -147,15 +147,15 @@ the domain goal (see below if you want to allow STRIPS goals) and the legality
 query returns true for the initial state of the problem. The legality query is
 defined by the legality predicate and the logic program consisting of all
 axioms in the domain file. While `:derived`-axioms are relevant for both the
-legality query and action applicability, `:axiom`-axioms are only relevant for
+legality query and action applicability, `:legality-axiom`-axioms are only relevant for
 the legality query and can be ignored for action applicability.
 
-The difference between the two kinds of PDDL axioms is that `:axiom`s may use
+The difference between the two kinds of PDDL axioms is that `:legality-axiom`s may use
 additional predicates, like the linear order predicate `<`, but the derived
 predicates they define may not be used in action definitions or the goal
 definition. Axioms with the `:derived` keyword may not use derived predicates
-defined by `:axiom`s (but `:axiom`s may use predicates defined by `:derived`).
-Some `:axiom` must define the legality predicate such that evaluating the logic
+defined by `:legality-axiom`s (but `:legality-axiom`s may use predicates defined by `:derived`).
+Some `:legality-axiom` must define the legality predicate such that evaluating the logic
 program consisting of all axioms (of both kinds) on the initial state of the
 given program determines the output of the legality query.
 
@@ -172,12 +172,12 @@ objects.
 In general `verifinsta` requires the goal of the given problem file to be
 identical to the goal of the given domain file. However, if the assumptions
 below hold and the `--strips-goal` option is set then `verifinsta` extends the
-conversion such that the legality query (defined via the `:axiom`s) of the
+conversion such that the legality query (defined via the `:legality-axiom`s) of the
 input domain can also determine the legality of the problem goal.
 
 Choose this option if your problem files are in STRIPS and your domain file
-describes with `:axiom`s which kinds of problem goals are allowed. For an
-example, see the `:axiom`s at the end of `blocksworld-domain.pddl` in the
+describes with `:legality-axiom`s which kinds of problem goals are allowed. For an
+example, see the `:legality-axiom`s at the end of `blocksworld-domain.pddl` in the
 `examples` folder.
 
 If the `--strips-goal` option is set then `verifinsta` assumes the following:
@@ -200,7 +200,7 @@ If the `--strips-goal` option is set then `verifinsta` assumes the following:
 Under these assumptions a problem goal is legal (i.e., satisfies the legality
 query) if the initial state extended with `_g`-versions of the goal atoms is
 legal. Note that a goal is trivially legal if the assumptions hold and the
-`:axiom`s in the domain not mention any `_g`-atoms.
+`:legality-axiom`s in the domain not mention any `_g`-atoms.
 
 
 ## References
