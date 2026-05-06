@@ -293,14 +293,15 @@ def main():
         output_domain_string = to_pddl_string(verifying_domain)
         output_problem_string = to_pddl_string(verifying_problem)
 
-    print("Verifying domain:")
-    print("-----------------")
-    print(output_domain_string)
-    print("")
-    print("Verifying problem:")
-    print("------------------")
-    print(output_problem_string)
-    print("")
+    if not args.output_file_prefix and not args.full:
+        print("Verifying domain:")
+        print("-----------------")
+        print(output_domain_string)
+        print("")
+        print("Verifying problem:")
+        print("------------------")
+        print(output_problem_string)
+        print("")
 
     output_file_prefix = "verifiying"
     if args.output_file_prefix:
