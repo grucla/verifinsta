@@ -304,7 +304,7 @@ def main():
         print(output_problem_string)
         print("")
 
-    output_file_prefix = "verifiying"
+    output_file_prefix = "verifying"
     if args.output_file_prefix:
         output_file_prefix = args.output_file_prefix
 
@@ -316,7 +316,7 @@ def main():
                 f.write(output_problem_string)
 
     if args.full:
-        print(f"Running the Fast Downward planner on the verifiying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
+        print(f"Running the Fast Downward planner on the verifying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
         downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
         print("'" + downward_call_string + "'")
 
