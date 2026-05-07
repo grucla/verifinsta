@@ -23,6 +23,7 @@ def parse_command_line_args():
                         help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
     parser.add_argument("-f", "--full", action='store_true',
                         help="also run the Fast Downward planner to verify the input. This option assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
+    parser.add_argument("--planner-output", help="write the planner output to file PLANNER_OUTPUT, this option is only relevant when --full is set.")
 
     return parser.parse_args()
 
@@ -326,13 +327,13 @@ def main():
 
         with profiling.profiling("Running Fast Downward", block=True):
             planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
-            # TODO Add an option that allows the user to access the planner output?
-            # E.g., by changing the --full option to optionally take a file
-            # location as argument and write the output to this file if the
-            # argument is given.
-
             # Clean up temporary files created by Fast Downward
             subprocess.run("./fast-downward.sif --cleanup", shell=True)
+
+        if args.planner_output:
+            with profiling.profiling("Writing planner output to file"):
+                with open(f"{args.planner_output}", "w") as f:
+                    f.write(planner_result.stdout.decode('unicode_escape'))
 
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
