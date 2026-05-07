@@ -336,9 +336,10 @@ def main():
 
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
-        else:
+        elif "Search stopped without finding a solution." in str(planner_result.stdout):
             print("The planner did not find a solution. The input problem could not be verified for the given domain.")
-            # TODO Give more info to the user.
+        else:
+            print("Something went wrong when running the planner. For more details run the planner separately by executing the above mentioned command manually.")
 
     print(f"Runtime total: {timer}")
     print(f"Memory total: {memory_measurement}")
