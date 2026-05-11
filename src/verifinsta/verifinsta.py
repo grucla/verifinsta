@@ -318,7 +318,13 @@ def main():
 
     if args.full:
         print(f"Running the Fast Downward planner on the verifying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
-        downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))"'
+        # Fast Downward call option explanations:
+        # - '--search "eager(single(blind()))"': use a very simple search because
+        #   we do not have any actions
+        # - '--translate-options --invariant-generation-max-candidates 0':
+        #   disable the invariant synthesis because we only have one reachable
+        #   state
+        downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))" --translate-options --invariant-generation-max-candidates 0'
         print("'" + downward_call_string + "'")
 
         if not os.path.isfile("fast-downward.sif"):
