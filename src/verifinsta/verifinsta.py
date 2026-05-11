@@ -2,6 +2,7 @@
 
 import argparse
 import os.path
+import pathlib
 import subprocess
 import sys
 
@@ -15,15 +16,17 @@ ORDERING_PRED_SYM = '<'
 def parse_command_line_args():
     parser = argparse.ArgumentParser(
             description="Verifinsta is a tool to help verifying if a planning problem is a legal instance of a planning domain. It converts the given domain and given problem to a 'verifying' domain and 'verifying' problem where the 'verifying' problem is solvable (by the empty plan) for the 'veriyfing' domain if the input problem is a legal instance of the input domain. See the --full option for doing this conversion and the actual verification in a single call of verifinsta.")
-    parser.add_argument("domain", help="PDDL 2.2 domain with legality query and domain-wide goal")
-    parser.add_argument("problem", help="PDDL 2.2 problem to verify against the domain")
-    parser.add_argument("-o", "--output-file-prefix",
+    parser.add_argument("domain", type=pathlib.Path, help="PDDL 2.2 domain with legality query and domain-wide goal")
+    parser.add_argument("problem", type=pathlib.Path, help="PDDL 2.2 problem to verify against the domain")
+    parser.add_argument("-o", "--output-file-prefix", type=pathlib.Path,
                         help="write the verifying domain into file <OUTPUT_FILE_PREFIX>-domain.pddl and the verifying problem into file <OUTPUT_FILE_PREFIX>-problem.pddl")
     parser.add_argument("-s", "--strips-goal", action='store_true',
                         help="do not check whether domain goal and problem goal are identical and instead add '_g' versions of the problem goal atoms to the initial state such that the legality query of the domain can verify the problem goal via the '_g' atoms. This option assumes that the problem goal is in STRIPS and that the domain goal requires the problem goal atoms to be true if their '_g' versions are true.")
     parser.add_argument("-f", "--full", action='store_true',
                         help="also run the Fast Downward planner to verify the input. This option assumes that the file 'fast-downward.sif' is present (the file can be pulled via Apptainer from 'docker://aibasel/downward:24.06').")
-    parser.add_argument("--planner-output", help="write the planner output to file PLANNER_OUTPUT, this option is only relevant when --full is set.")
+    parser.add_argument("--planner-output", type=pathlib.Path, help="write the planner output to file PLANNER_OUTPUT, this option is only relevant when --full is set.")
+    parser.add_argument("--planner-time-limit", type=int, help="pass PLANNER_TIME_LIMIT to the planner as its time limit in seconds, this option is only relevant when --full is set.")
+    parser.add_argument("--planner-memory-limit", type=int, help="pass PLANNER_MEMORY_LIMIT to the planner as its memory limit in MiB, this option is only relevant when --full is set.")
 
     return parser.parse_args()
 
@@ -324,7 +327,16 @@ def main():
         # - '--translate-options --invariant-generation-max-candidates 0':
         #   disable the invariant synthesis because we only have one reachable
         #   state
-        downward_call_string = f'./fast-downward.sif {output_file_prefix}-domain.pddl {output_file_prefix}-problem.pddl --search "eager(single(blind()))" --translate-options --invariant-generation-max-candidates 0'
+        downward_arguments = [f'{output_file_prefix}-domain.pddl',
+                              f'{output_file_prefix}-problem.pddl',
+                              '--search "eager(single(blind()))"',
+                              '--translate-options --invariant-generation-max-candidates 0']
+        if args.planner_memory_limit:
+            downward_arguments.insert(0, f'--overall-memory-limit {args.planner_memory_limit}')
+        if args.planner_time_limit:
+            downward_arguments.insert(0, f'--overall-time-limit {args.planner_time_limit}')
+
+        downward_call_string = './fast-downward.sif ' + ' '.join(downward_arguments)
         print("'" + downward_call_string + "'")
 
         if not os.path.isfile("fast-downward.sif"):
