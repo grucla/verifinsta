@@ -282,7 +282,7 @@ def build_verifying_task(domain, problem, args):
     return (verifying_domain, verifying_problem)
 
 def main():
-    timer = profiling.Timer()
+    timer = profiling.CombinedTimer()
     memory_measurement = profiling.MemoryMeasurement()
 
     args = parse_command_line_args()
@@ -343,16 +343,26 @@ def main():
             print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
             sys.exit(1)
 
-        with profiling.profiling("Running Fast Downward", block=True):
+        with profiling.timing("Running Fast Downward", block=True, children=True):
             planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
             print(f"Planner exit code: {planner_result.returncode}")
             # Clean up temporary files created by Fast Downward
             subprocess.run("./fast-downward.sif --cleanup", shell=True)
 
+        planner_output = planner_result.stdout.decode('unicode_escape')
+        translate_memory = [line for line in planner_output.splitlines() if line.startswith("Translator peak memory:")]
+        search_memory = [line for line in planner_output.splitlines() if line.startswith("Peak memory:")]
+        if translate_memory or search_memory:
+            print("Memory reported by planner:")
+        if translate_memory:
+            print(translate_memory[0])
+        if search_memory:
+            print(search_memory[0].replace("Peak", "Search peak"))
+
         if args.planner_output:
             with profiling.profiling("Writing planner output to file"):
                 with open(f"{args.planner_output}", "w") as f:
-                    f.write(planner_result.stdout.decode('unicode_escape'))
+                    f.write(planner_output)
 
         if "Solution found." in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")

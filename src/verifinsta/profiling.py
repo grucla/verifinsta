@@ -21,6 +21,20 @@ class Timer:
             time.time() - self.start_time)
 
 
+class ChildrenTimer(Timer):
+    # measures time of the child processes instead of the process' own time
+    def _clock(self):
+        times = os.times()
+        return times[2] + times[3]
+
+
+class CombinedTimer(Timer):
+    # measures time of the child processes plus process' own time
+    def _clock(self):
+        times = os.times()
+        return times[0] + times[1] + times[2] + times[3]
+
+
 class MemoryMeasurement:
     def __init__(self):
         self.rss_before, self.vms_before, self.shared_before = get_process_memory()
@@ -57,8 +71,11 @@ def format_bytes_to_mb(bytes):
 
 
 @contextlib.contextmanager
-def timing(text, block=False):
-    timer = Timer()
+def timing(text, block=False, children=False):
+    if children:
+        timer = ChildrenTimer()
+    else:
+        timer = Timer()
     if block:
         print(f"{text}...")
     else:
@@ -89,9 +106,12 @@ def measuring_memory(text, block=False):
 
 
 @contextlib.contextmanager
-def profiling(text, block=False):
+def profiling(text, block=False, children=False):
     # measures both time and memory
-    timer = Timer()
+    if children:
+        timer = ChildrenTimer()
+    else:
+        timer = Timer()
     mem = MemoryMeasurement()
     if block:
         print(f"{text}...")
