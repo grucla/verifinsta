@@ -345,7 +345,12 @@ def main():
 
         with profiling.timing("Running Fast Downward", block=True, children=True):
             planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
-            print(f"Planner exit code: {planner_result.returncode}")
+            planner_exit_code = planner_result.returncode
+            if planner_exit_code > 128:
+                # Convert exit codes that should have been negative back to
+                # their original value
+                planner_exit_code = planner_result.returncode - 256
+            print(f"Planner exit code: {planner_exit_code}")
             # Clean up temporary files created by Fast Downward
             subprocess.run("./fast-downward.sif --cleanup", shell=True)
 
