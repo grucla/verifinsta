@@ -345,6 +345,7 @@ def main():
 
         with profiling.profiling("Running Fast Downward", block=True):
             planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
+            print(f"Planner exit code: {planner_result.returncode}")
             # Clean up temporary files created by Fast Downward
             subprocess.run("./fast-downward.sif --cleanup", shell=True)
 
