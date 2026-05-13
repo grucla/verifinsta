@@ -255,6 +255,8 @@ def build_verifying_task(domain, problem, args):
     # strips_goal flag is set then the list of predicates must also include
     # g-versions of the predicates mentioned in the problem goal.
     needed_predicates = [[ORDERING_PRED_SYM, '?x1', '?x2']]
+    if get_domain_or_problem_component(domain, ":types"):
+        needed_predicates = [[ORDERING_PRED_SYM, '?x1', '-', 'object', '?x2', '-', 'object']]
     if args.strips_goal:
         # TODO Check more thoroughly whether goal is STRIPS?
         if len(goal) > 1 and isinstance(goal[1], list) and goal[0] != "and":
