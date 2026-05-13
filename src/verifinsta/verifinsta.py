@@ -10,7 +10,7 @@ from . import lisp_parser
 from . import profiling
 
 # predicate symbol used for defining a linear order
-ORDERING_PRED_SYM = '<'
+ORDERING_PRED_SYM = 'le'
 
 
 def parse_command_line_args():
@@ -320,39 +320,27 @@ def main():
                 f.write(output_problem_string)
 
     if args.full:
-        print(f"Running the Fast Downward planner on the verifying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
-        # Fast Downward call option explanations:
-        # - '--search "eager(single(blind()))"': use a very simple search because
-        #   we do not have any actions
-        # - '--translate-options --invariant-generation-max-candidates 0':
-        #   disable the invariant synthesis because we only have one reachable
-        #   state
-        downward_arguments = [f'{output_file_prefix}-domain.pddl',
+        print(f"Running VAL on the verifying domain and problem to verify whether the input problem is legal for the input domain. Executing command:")
+        val_arguments = [f'{output_file_prefix}-domain.pddl',
                               f'{output_file_prefix}-problem.pddl',
-                              '--search "eager(single(blind()))"',
-                              '--translate-options --invariant-generation-max-candidates 0']
-        if args.planner_memory_limit:
-            downward_arguments.insert(0, f'--overall-memory-limit {args.planner_memory_limit}')
-        if args.planner_time_limit:
-            downward_arguments.insert(0, f'--overall-time-limit {args.planner_time_limit}')
+                              'sas_plan']
+        #if args.planner_memory_limit:
+        #    # TODO How to limit memory?
+        #    val_arguments.insert(0, f'--overall-memory-limit {args.planner_memory_limit}')
+        #if args.planner_time_limit:
+        #    val_arguments.insert(0, f'--overall-time-limit {args.planner_time_limit}')
 
-        downward_call_string = './fast-downward.sif ' + ' '.join(downward_arguments)
-        print("'" + downward_call_string + "'")
+        val_call_string = 'validate ' + ' '.join(val_arguments)
+        print("'" + val_call_string + "'")
 
-        if not os.path.isfile("fast-downward.sif"):
-            print("Error: Could not find file 'fast-downward.sif'. The input problem could not be verified for the given domain.")
-            sys.exit(1)
-
-        with profiling.timing("Running Fast Downward", block=True, children=True):
-            planner_result = subprocess.run(downward_call_string, shell=True, capture_output=True)
+        with profiling.timing("Running VAL", block=True, children=True):
+            planner_result = subprocess.run(val_call_string, shell=True, capture_output=True)
             planner_exit_code = planner_result.returncode
             if planner_exit_code > 128:
                 # Convert exit codes that should have been negative back to
                 # their original value
                 planner_exit_code = planner_result.returncode - 256
             print(f"Planner exit code: {planner_exit_code}")
-            # Clean up temporary files created by Fast Downward
-            subprocess.run("./fast-downward.sif --cleanup", shell=True)
 
         planner_output = planner_result.stdout.decode('unicode_escape')
         translate_memory = [line for line in planner_output.splitlines() if line.startswith("Translator peak memory:")]
@@ -369,9 +357,9 @@ def main():
                 with open(f"{args.planner_output}", "w") as f:
                     f.write(planner_output)
 
-        if "Solution found." in str(planner_result.stdout):
+        if "Plan valid" in str(planner_result.stdout):
             print("The planner found a solution, verification successful!")
-        elif "Search stopped without finding a solution." in str(planner_result.stdout):
+        elif "Plan invalid" in str(planner_result.stdout):
             print("The planner did not find a solution. The input problem could not be verified for the given domain.")
         else:
             print("Something went wrong when running the planner. For more details run the planner separately by executing the above mentioned command manually.")
