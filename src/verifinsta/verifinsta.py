@@ -265,9 +265,9 @@ def build_verifying_task(domain, problem, args):
             sys.exit(1)
         goal_predicates = get_predicates_of_strips_goal(goal)
         check_domain_goal_compatible_with_strips_goal(domain_goal, goal_predicates)
+
+        domain_predicates = get_domain_or_problem_component(domain, ":predicates")
         for goal_predicate in goal_predicates:
-            domain_predicates = get_domain_or_problem_component(domain,
-                                                                 ":predicates")
             typed_goal_pred = next(
                     pred for pred in domain_predicates if pred[0] ==
                     goal_predicate[0])
