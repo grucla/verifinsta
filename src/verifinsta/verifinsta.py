@@ -230,17 +230,26 @@ def to_pddl_string(parsed_pddl):
     if not isinstance(parsed_pddl, list):
         return parsed_pddl
 
-    output = ""
-    for element in parsed_pddl:
-        output = output + to_pddl_string(element) + " "
-    output = output[:-1] # remove trailing space character
+    def transform_list(to_transform):
+        if isinstance(to_transform, list):
+            yield "("
+            first = True
+            for item in to_transform:
+                if not first:
+                    yield " "
+                first = False
+                yield from transform_list(item)
+            if isinstance(to_transform[0], str) and (
+                    to_transform[0] == "problem" or
+                    to_transform[0] == "domain" or
+                    ':' in to_transform[0]):
+                yield ")\n"
+            else:
+                yield ")"
+        else:
+            yield to_transform
 
-    output = "(" + output + ")"
-    if isinstance(parsed_pddl[0], str) and (parsed_pddl[0] == "problem" or
-                                            parsed_pddl[0] == "domain" or ':' in
-                                            parsed_pddl[0]):
-        output = output + "\n"
-    return output
+    return "".join(transform_list(parsed_pddl))
 
 def build_verifying_task(domain, problem, args):
     legality_predicate = get_domain_or_problem_component(domain,
